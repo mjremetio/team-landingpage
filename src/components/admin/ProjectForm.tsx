@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { X, Upload, Image as ImageIcon, ExternalLink, Github } from 'lucide-react'
-import { Project, ProjectFormData } from '@/types'
+import { X, Upload, Image as ImageIcon, ExternalLink, Github, Users, UserCheck } from 'lucide-react'
+import { Project, ProjectFormData, TeamMember } from '@/types'
 
 interface ProjectFormProps {
   project?: Project
@@ -27,6 +27,11 @@ export function ProjectForm({ project, onSubmit, isLoading = false }: ProjectFor
   const [images, setImages] = useState<File[]>([])
   const [existingImages, setExistingImages] = useState<string[]>(project?.images || [])
   const [dragActive, setDragActive] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [selectedTeamMembers, setSelectedTeamMembers] = useState<string[]>(project?.teamMembers || [])
+  const [projectLead, setProjectLead] = useState<string>(project?.projectLead || '')
+  const [collaborationNotes, setCollaborationNotes] = useState<string>(project?.collaborationNotes || '')
+  const [loadingTeamMembers, setLoadingTeamMembers] = useState(false)
 
   const {
     register,
@@ -58,6 +63,26 @@ export function ProjectForm({ project, onSubmit, isLoading = false }: ProjectFor
     'Other'
   ]
 
+  useEffect(() => {
+    fetchTeamMembers()
+  }, [])
+
+  const fetchTeamMembers = async () => {
+    setLoadingTeamMembers(true)
+    try {
+      const response = await fetch('/api/team-members')
+      const result = await response.json()
+      
+      if (result.success) {
+        setTeamMembers(result.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching team members:', error)
+    } finally {
+      setLoadingTeamMembers(false)
+    }
+  }
+
   const handleAddTechnology = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && techInput.trim()) {
       e.preventDefault()
@@ -71,6 +96,21 @@ export function ProjectForm({ project, onSubmit, isLoading = false }: ProjectFor
 
   const removeTechnology = (tech: string) => {
     setTechnologies(technologies.filter(t => t !== tech))
+  }
+
+  const toggleTeamMember = (memberId: string) => {
+    setSelectedTeamMembers(prev => 
+      prev.includes(memberId) 
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    )
+  }
+
+  const removeTeamMember = (memberId: string) => {
+    setSelectedTeamMembers(prev => prev.filter(id => id !== memberId))
+    if (projectLead === memberId) {
+      setProjectLead('')
+    }
   }
 
   const handleDrag = (e: React.DragEvent) => {
@@ -106,11 +146,14 @@ export function ProjectForm({ project, onSubmit, isLoading = false }: ProjectFor
     setExistingImages(existingImages.filter((_, i) => i !== index))
   }
 
-  const onFormSubmit = async (data: Omit<ProjectFormData, 'technologies' | 'images'>) => {
+  const onFormSubmit = async (data: Omit<ProjectFormData, 'technologies' | 'images' | 'teamMembers' | 'projectLead' | 'collaborationNotes'>) => {
     const formData: ProjectFormData = {
       ...data,
       technologies,
       images,
+      teamMembers: selectedTeamMembers,
+      projectLead: projectLead || undefined,
+      collaborationNotes: collaborationNotes || undefined,
     }
 
     await onSubmit(formData)
@@ -228,6 +271,122 @@ export function ProjectForm({ project, onSubmit, isLoading = false }: ProjectFor
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Team Members */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Users className="w-5 h-5" />
+            <span>Team & Collaboration</span>
+          </CardTitle>
+          <CardDescription>
+            Select team members who worked on this project and collaboration details
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Team Member Selection */}
+          <div className="space-y-4">
+            <Label>Team Members</Label>
+            {loadingTeamMembers ? (
+              <div className="text-sm text-muted-foreground">Loading team members...</div>
+            ) : teamMembers.length > 0 ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
+                  {teamMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className={`flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-muted ${
+                        selectedTeamMembers.includes(member.id) ? 'bg-muted' : ''
+                      }`}
+                      onClick={() => toggleTeamMember(member.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedTeamMembers.includes(member.id)}
+                        onChange={() => toggleTeamMember(member.id)}
+                        className="rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{member.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{member.role}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Selected Team Members */}
+                {selectedTeamMembers.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Selected Team Members</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTeamMembers.map((memberId) => {
+                        const member = teamMembers.find(m => m.id === memberId)
+                        return member ? (
+                          <Badge key={memberId} variant="secondary" className="text-sm">
+                            {member.name}
+                            <button
+                              type="button"
+                              onClick={() => removeTeamMember(memberId)}
+                              className="ml-1 hover:text-red-500"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        ) : null
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                No team members available. Add team members in the admin panel first.
+              </div>
+            )}
+          </div>
+
+          {/* Project Lead */}
+          {selectedTeamMembers.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="projectLead">
+                <UserCheck className="w-4 h-4 inline mr-1" />
+                Project Lead (Optional)
+              </Label>
+              <Select
+                value={projectLead}
+                onValueChange={setProjectLead}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select project lead" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No project lead</SelectItem>
+                  {selectedTeamMembers.map((memberId) => {
+                    const member = teamMembers.find(m => m.id === memberId)
+                    return member ? (
+                      <SelectItem key={memberId} value={memberId}>
+                        {member.name} - {member.role}
+                      </SelectItem>
+                    ) : null
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Collaboration Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="collaborationNotes">Collaboration Notes (Optional)</Label>
+            <Textarea
+              id="collaborationNotes"
+              value={collaborationNotes}
+              onChange={(e) => setCollaborationNotes(e.target.value)}
+              placeholder="Add notes about how the team collaborated, roles, or any special acknowledgments..."
+              rows={3}
+            />
+          </div>
         </CardContent>
       </Card>
 
