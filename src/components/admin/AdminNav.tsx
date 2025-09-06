@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut, useSession } from 'next-auth/react'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -31,7 +31,7 @@ const navigation = [
 
 export function AdminNav() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { user, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const NavItems = ({ className = '' }: { className?: string }) => (
@@ -79,14 +79,13 @@ export function AdminNav() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="w-full justify-start">
                   <Avatar className="w-8 h-8 mr-3">
-                    <AvatarImage src={session?.user?.image || ''} />
                     <AvatarFallback>
-                      {session?.user?.name?.charAt(0) || 'A'}
+                      {user?.username?.charAt(0)?.toUpperCase() || 'A'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="text-left">
-                    <p className="text-sm font-medium">{session?.user?.name}</p>
-                    <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
+                    <p className="text-sm font-medium">{user?.username || 'Admin'}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email || 'admin@portfolio.com'}</p>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -98,7 +97,7 @@ export function AdminNav() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>
+                <DropdownMenuItem onClick={logout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign out
                 </DropdownMenuItem>
@@ -117,9 +116,8 @@ export function AdminNav() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
                 <Avatar className="w-6 h-6">
-                  <AvatarImage src={session?.user?.image || ''} />
                   <AvatarFallback className="text-xs">
-                    {session?.user?.name?.charAt(0) || 'A'}
+                    {user?.username?.charAt(0)?.toUpperCase() || 'A'}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -132,7 +130,7 @@ export function AdminNav() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => signOut()}>
+              <DropdownMenuItem onClick={logout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign out
               </DropdownMenuItem>

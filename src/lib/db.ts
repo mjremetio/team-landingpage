@@ -4,6 +4,8 @@ import { Project, Section } from '@/types'
 // Database utility functions for Vercel KV
 
 export class Database {
+  // Expose kv instance for direct access
+  static kv = kv
   // Project operations
   static async createProject(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project> {
     const id = `project_${Date.now()}_${Math.random().toString(36).substring(7)}`
