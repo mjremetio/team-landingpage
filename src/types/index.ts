@@ -1,4 +1,24 @@
-// TypeScript definitions for the portfolio system
+// TypeScript definitions for the team portfolio system
+
+export interface TeamMember {
+  id: string
+  name: string
+  role: string
+  bio: string
+  avatar?: string
+  skills: string[]
+  experience: string
+  socialLinks: {
+    github?: string
+    linkedin?: string
+    twitter?: string
+    email?: string
+    portfolio?: string
+  }
+  joinedDate: Date
+  isActive: boolean
+  specialties: string[]
+}
 
 export interface Project {
   id: string
@@ -11,13 +31,16 @@ export interface Project {
   githubUrl?: string
   category: string
   featured: boolean
+  teamMembers: string[] // Array of team member IDs
+  projectLead?: string // Team member ID
+  collaborationNotes?: string
   createdAt: Date
   updatedAt: Date
 }
 
 export interface Section {
   id: string
-  type: 'hero' | 'about' | 'tools' | 'contact' | 'footer'
+  type: 'hero' | 'about' | 'team' | 'tools' | 'contact' | 'footer'
   content: Record<string, unknown>
   updatedAt: Date
 }
@@ -29,25 +52,49 @@ export interface HeroSection {
   ctaText: string
   ctaUrl: string
   backgroundImage?: string
+  teamHighlight: {
+    memberCount: number
+    foundedYear?: number
+    location?: string
+  }
   socialLinks: {
     github?: string
     linkedin?: string
     twitter?: string
     email?: string
+    website?: string
   }
 }
 
 export interface AboutSection {
   title: string
-  biography: string
-  skills: string[]
-  experience: {
-    company: string
-    role: string
-    duration: string
+  mission: string
+  vision: string
+  values: string[]
+  teamStory: string
+  achievements: {
+    title: string
     description: string
+    year: number
   }[]
-  certifications: string[]
+  companyInfo: {
+    founded?: number
+    location?: string
+    size?: string
+    industry?: string
+  }
+}
+
+export interface TeamSection {
+  title: string
+  description: string
+  displayFeatured: boolean
+  memberIds: string[] // References to TeamMember ids
+  departments: {
+    name: string
+    description: string
+    memberIds: string[]
+  }[]
 }
 
 export interface ToolsSection {
@@ -86,6 +133,7 @@ export interface FooterSection {
 export type SectionContent = 
   | HeroSection 
   | AboutSection 
+  | TeamSection
   | ToolsSection 
   | ContactSection 
   | FooterSection
@@ -105,7 +153,27 @@ export interface ProjectFormData {
   githubUrl?: string
   category: string
   featured: boolean
+  teamMembers: string[]
+  projectLead?: string
+  collaborationNotes?: string
   images: File[]
+}
+
+export interface TeamMemberFormData {
+  name: string
+  role: string
+  bio: string
+  skills: string[]
+  experience: string
+  specialties: string[]
+  socialLinks: {
+    github?: string
+    linkedin?: string
+    twitter?: string
+    email?: string
+    portfolio?: string
+  }
+  avatar?: File
 }
 
 export interface APIResponse<T> {
