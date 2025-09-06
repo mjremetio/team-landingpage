@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Auth } from './lib/auth'
+import { EdgeAuth } from './lib/auth-edge'
 
 export async function middleware(request: NextRequest) {
   // Check if user is trying to access admin routes
@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Verify the token
-    const result = await Auth.verifyToken(token)
+    const result = EdgeAuth.verify(token)
     if (!result.success || result.user?.role !== 'admin') {
       return NextResponse.redirect(new URL('/login', request.url))
     }
@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const result = await Auth.verifyToken(token)
+    const result = EdgeAuth.verify(token)
     if (!result.success || result.user?.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
