@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions, isAdmin } from '@/lib/auth'
 import { Database, validateSection } from '@/lib/db'
 import { APIResponse, Section } from '@/types'
 
@@ -25,14 +23,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    // Authentication is handled by middleware
 
     const body = await request.json()
     const { section, content } = body

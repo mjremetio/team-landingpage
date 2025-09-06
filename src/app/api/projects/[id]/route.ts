@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions, isAdmin } from '@/lib/auth'
 import { Database } from '@/lib/db'
 import { APIResponse, Project } from '@/types'
 
@@ -42,14 +40,7 @@ export async function PUT(
   { params }: RouteParams
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    // Authentication is handled by middleware
 
     const body = await request.json()
     const project = await Database.updateProject(params.id, body)
@@ -82,14 +73,7 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    // Authentication is handled by middleware
 
     const success = await Database.deleteProject(params.id)
     

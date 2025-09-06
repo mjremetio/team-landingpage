@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
-import { getServerSession } from 'next-auth'
-import { authOptions, isAdmin } from '@/lib/auth'
+import * as fs from 'fs'
+import * as path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.email || !isAdmin(session.user.email)) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    // Authentication is handled by middleware
 
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]
@@ -60,13 +52,21 @@ export async function POST(request: NextRequest) {
       const filename = `${timestamp}-${randomString}.${extension}`
 
       try {
-        const blob = await put(filename, file, {
-          access: 'public',
-        })
+        // Save file locally instead of using Vercel Blob
+        const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true })
+        }
+        
+        const filePath = path.join(uploadsDir, filename)
+        const arrayBuffer = await file.arrayBuffer()
+        fs.writeFileSync(filePath, Buffer.from(arrayBuffer))
+        
+        const publicUrl = `/uploads/${filename}`
 
         uploadedFiles.push({
-          url: blob.url,
-          pathname: blob.pathname,
+          url: publicUrl,
+          pathname: filename,
           size: file.size,
           type: file.type,
           originalName: file.name,
