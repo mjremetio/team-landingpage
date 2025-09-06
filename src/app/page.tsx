@@ -1,6 +1,7 @@
 import { Navbar } from '@/components/public/Navbar'
 import { Hero } from '@/components/public/Hero'
 import { About } from '@/components/public/About'
+import { Team } from '@/components/public/Team'
 import { Tools } from '@/components/public/Tools'
 import { Portfolio } from '@/components/public/Portfolio'
 import { Contact } from '@/components/public/Contact'
@@ -28,6 +29,7 @@ export default async function Home() {
       <main>
         <Hero />
         <About />
+        <Team />
         <Tools />
         <Portfolio />
         <Contact />

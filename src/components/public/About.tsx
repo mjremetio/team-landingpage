@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { CalendarDays, Award } from 'lucide-react'
+import { CalendarDays, Award, Target, Eye, Heart, Building } from 'lucide-react'
 import { AboutSection } from '@/types'
 
 export function About() {
@@ -64,110 +64,137 @@ export function About() {
                 {content.title}
               </h2>
             )}
-            {content?.biography && (
+            {content?.teamStory && (
               <p className="text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                {content.biography}
+                {content.teamStory}
               </p>
             )}
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12">
-            {/* Skills Section */}
-            {content?.skills && content.skills.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Award className="w-5 h-5" />
-                    <span>Skills & Technologies</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Technologies and tools I work with regularly
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {content.skills.map((skill, index) => (
-                      <Badge key={index} variant="secondary" className="text-sm">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* Mission & Vision */}
+            <div className="space-y-6">
+              {content?.mission && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="w-5 h-5 text-primary" />
+                      Our Mission
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {content.mission}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
-            {/* Experience Section */}
-            {content?.experience && content.experience.length > 0 && (
+              {content?.vision && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-primary" />
+                      Our Vision
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {content.vision}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Values & Company Info */}
+            <div className="space-y-6">
+              {content?.values && content.values.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-primary" />
+                      Our Values
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {content.values.map((value: string, index: number) => (
+                        <div key={index} className="flex items-start gap-3">
+                          <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="text-muted-foreground">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {content?.companyInfo && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building className="w-5 h-5 text-primary" />
+                      Company Info
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {content.companyInfo.founded && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Founded:</span>
+                        <span className="font-medium">{content.companyInfo.founded}</span>
+                      </div>
+                    )}
+                    {content.companyInfo.location && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Location:</span>
+                        <span className="font-medium">{content.companyInfo.location}</span>
+                      </div>
+                    )}
+                    {content.companyInfo.size && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Team Size:</span>
+                        <span className="font-medium">{content.companyInfo.size}</span>
+                      </div>
+                    )}
+                    {content.companyInfo.industry && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Industry:</span>
+                        <span className="font-medium">{content.companyInfo.industry}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+
+          {/* Achievements */}
+          {content?.achievements && content.achievements.length > 0 && (
+            <div className="mt-12">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <CalendarDays className="w-5 h-5" />
-                    <span>Experience</span>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-primary" />
+                    Our Achievements
                   </CardTitle>
                   <CardDescription>
-                    My professional journey and key milestones
+                    Key milestones and accomplishments
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
-                    {content.experience.map((exp, index) => (
-                      <div key={index} className="relative">
-                        {/* Timeline connector */}
-                        {index < content.experience.length - 1 && (
-                          <div className="absolute left-0 top-8 w-px h-16 bg-border" />
-                        )}
-                        
-                        <div className="flex space-x-4">
-                          <div className="flex-shrink-0">
-                            <div className="w-2 h-2 bg-primary rounded-full mt-2" />
-                          </div>
-                          <div className="flex-grow">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
-                              <h4 className="font-semibold text-foreground">
-                                {exp.role}
-                              </h4>
-                              <span className="text-sm text-muted-foreground">
-                                {exp.duration}
-                              </span>
-                            </div>
-                            <p className="text-primary font-medium mb-2">
-                              {exp.company}
-                            </p>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {exp.description}
-                            </p>
-                          </div>
-                        </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {content.achievements.map((achievement: any, index: number) => (
+                      <div key={index} className="p-6 border rounded-lg bg-muted/50 text-center">
+                        <div className="text-2xl font-bold text-primary mb-2">{achievement.year}</div>
+                        <h3 className="font-semibold mb-2">{achievement.title}</h3>
+                        <p className="text-sm text-muted-foreground">{achievement.description}</p>
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
-
-          {/* Certifications */}
-          {content?.certifications && content.certifications.length > 0 && (
-            <Card className="mt-12">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Award className="w-5 h-5" />
-                  <span>Certifications</span>
-                </CardTitle>
-                <CardDescription>
-                  Professional certifications and achievements
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {content.certifications.map((cert, index) => (
-                    <div key={index} className="p-4 border rounded-lg">
-                      <p className="font-medium">{cert}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            </div>
           )}
         </div>
       </div>
