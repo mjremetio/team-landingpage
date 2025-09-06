@@ -1,11 +1,87 @@
-import { kv } from '@vercel/kv'
+import * as fs from 'fs'
+import * as path from 'path'
+import CryptoJS from 'crypto-js'
 import { Project, Section } from '@/types'
 
-// Database utility functions for Vercel KV
+// Database utility functions for encrypted JSON file storage
+
+const ENCRYPTION_KEY = process.env.DB_ENCRYPTION_KEY || 'your-secret-encryption-key-change-in-production'
+const DATA_DIR = path.join(process.cwd(), 'data')
+const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json')
+const SECTIONS_FILE = path.join(DATA_DIR, 'sections.json')
+
+interface DatabaseFile {
+  projects: Record<string, Project>
+  projectIds: string[]
+  projectSlugs: Record<string, string>
+}
+
+interface SectionsFile {
+  sections: Record<string, Section>
+}
 
 export class Database {
-  // Expose kv instance for direct access
-  static kv = kv
+  // Ensure data directory exists
+  static ensureDataDir() {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true })
+    }
+  }
+
+  // Encrypt data before saving
+  static encryptData(data: any): string {
+    return CryptoJS.AES.encrypt(JSON.stringify(data), ENCRYPTION_KEY).toString()
+  }
+
+  // Decrypt data after loading
+  static decryptData<T>(encryptedData: string): T {
+    const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY)
+    return JSON.parse(bytes.toString(CryptoJS.enc.Utf8))
+  }
+
+  // Load projects from encrypted file
+  static loadProjectsFile(): DatabaseFile {
+    this.ensureDataDir()
+    if (!fs.existsSync(PROJECTS_FILE)) {
+      return { projects: {}, projectIds: [], projectSlugs: {} }
+    }
+    try {
+      const encryptedData = fs.readFileSync(PROJECTS_FILE, 'utf8')
+      return this.decryptData<DatabaseFile>(encryptedData)
+    } catch (error) {
+      console.error('Error loading projects file:', error)
+      return { projects: {}, projectIds: [], projectSlugs: {} }
+    }
+  }
+
+  // Save projects to encrypted file
+  static saveProjectsFile(data: DatabaseFile) {
+    this.ensureDataDir()
+    const encryptedData = this.encryptData(data)
+    fs.writeFileSync(PROJECTS_FILE, encryptedData, 'utf8')
+  }
+
+  // Load sections from encrypted file
+  static loadSectionsFile(): SectionsFile {
+    this.ensureDataDir()
+    if (!fs.existsSync(SECTIONS_FILE)) {
+      return { sections: {} }
+    }
+    try {
+      const encryptedData = fs.readFileSync(SECTIONS_FILE, 'utf8')
+      return this.decryptData<SectionsFile>(encryptedData)
+    } catch (error) {
+      console.error('Error loading sections file:', error)
+      return { sections: {} }
+    }
+  }
+
+  // Save sections to encrypted file
+  static saveSectionsFile(data: SectionsFile) {
+    this.ensureDataDir()
+    const encryptedData = this.encryptData(data)
+    fs.writeFileSync(SECTIONS_FILE, encryptedData, 'utf8')
+  }
   // Project operations
   static async createProject(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project> {
     const id = `project_${Date.now()}_${Math.random().toString(36).substring(7)}`
@@ -13,48 +89,48 @@ export class Database {
     const now = new Date()
     
     const newProject: Project = {
+      ...project,
       id,
       slug,
       createdAt: now,
       updatedAt: now,
-      ...project,
     }
     
-    await kv.hset(`project:${id}`, newProject)
-    await kv.sadd('projects', id)
-    
-    // Update slug index
-    await kv.hset('project_slugs', slug, id)
+    const data = this.loadProjectsFile()
+    data.projects[id] = newProject
+    data.projectIds.push(id)
+    data.projectSlugs[slug] = id
+    this.saveProjectsFile(data)
     
     return newProject
   }
 
   static async getProject(id: string): Promise<Project | null> {
-    const project = await kv.hgetall(`project:${id}`)
-    if (!project || Object.keys(project).length === 0) {
+    const data = this.loadProjectsFile()
+    const project = data.projects[id]
+    if (!project) {
       return null
     }
     
     return {
       ...project,
-      technologies: Array.isArray(project.technologies) ? project.technologies : JSON.parse(project.technologies as string || '[]'),
-      images: Array.isArray(project.images) ? project.images : JSON.parse(project.images as string || '[]'),
-      featured: Boolean(project.featured),
-      createdAt: new Date(project.createdAt as string),
-      updatedAt: new Date(project.updatedAt as string),
-    } as Project
+      createdAt: new Date(project.createdAt),
+      updatedAt: new Date(project.updatedAt),
+    }
   }
 
   static async getProjectBySlug(slug: string): Promise<Project | null> {
-    const id = await kv.hget('project_slugs', slug)
+    const data = this.loadProjectsFile()
+    const id = data.projectSlugs[slug]
     if (!id) return null
-    return this.getProject(id as string)
+    return this.getProject(id)
   }
 
   static async updateProject(id: string, updates: Partial<Omit<Project, 'id' | 'createdAt'>>): Promise<Project | null> {
     const existing = await this.getProject(id)
     if (!existing) return null
     
+    const data = this.loadProjectsFile()
     const updatedProject: Project = {
       ...existing,
       ...updates,
@@ -66,12 +142,13 @@ export class Database {
     // Update slug index if title changed
     if (updates.title && updates.title !== existing.title) {
       const newSlug = this.generateSlug(updates.title)
-      await kv.hdel('project_slugs', existing.slug)
-      await kv.hset('project_slugs', newSlug, id)
+      delete data.projectSlugs[existing.slug]
+      data.projectSlugs[newSlug] = id
       updatedProject.slug = newSlug
     }
     
-    await kv.hset(`project:${id}`, updatedProject)
+    data.projects[id] = updatedProject
+    this.saveProjectsFile(data)
     return updatedProject
   }
 
@@ -79,9 +156,11 @@ export class Database {
     const project = await this.getProject(id)
     if (!project) return false
     
-    await kv.del(`project:${id}`)
-    await kv.srem('projects', id)
-    await kv.hdel('project_slugs', project.slug)
+    const data = this.loadProjectsFile()
+    delete data.projects[id]
+    data.projectIds = data.projectIds.filter(pid => pid !== id)
+    delete data.projectSlugs[project.slug]
+    this.saveProjectsFile(data)
     
     return true
   }
@@ -95,13 +174,17 @@ export class Database {
   } = {}): Promise<{ projects: Project[], total: number }> {
     const { page = 1, limit = 10, category, featured, search } = options
     
-    const projectIds = await kv.smembers('projects') as string[]
+    const data = this.loadProjectsFile()
     let projects: Project[] = []
     
-    for (const id of projectIds) {
-      const project = await this.getProject(id)
+    for (const id of data.projectIds) {
+      const project = data.projects[id]
       if (project) {
-        projects.push(project)
+        projects.push({
+          ...project,
+          createdAt: new Date(project.createdAt),
+          updatedAt: new Date(project.updatedAt),
+        })
       }
     }
     
@@ -135,16 +218,16 @@ export class Database {
 
   // Section operations
   static async getSection(type: Section['type']): Promise<Section | null> {
-    const section = await kv.hgetall(`section:${type}`)
-    if (!section || Object.keys(section).length === 0) {
+    const data = this.loadSectionsFile()
+    const section = data.sections[type]
+    if (!section) {
       return null
     }
     
     return {
       ...section,
-      content: typeof section.content === 'string' ? JSON.parse(section.content) : section.content,
-      updatedAt: new Date(section.updatedAt as string),
-    } as Section
+      updatedAt: new Date(section.updatedAt),
+    }
   }
 
   static async updateSection(type: Section['type'], content: Record<string, unknown>): Promise<Section> {
@@ -155,10 +238,9 @@ export class Database {
       updatedAt: new Date(),
     }
     
-    await kv.hset(`section:${type}`, {
-      ...section,
-      content: JSON.stringify(content),
-    })
+    const data = this.loadSectionsFile()
+    data.sections[type] = section
+    this.saveSectionsFile(data)
     
     return section
   }
