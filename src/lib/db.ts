@@ -1,7 +1,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import CryptoJS from 'crypto-js'
-import { Project, Section } from '@/types'
+import { Project, Section, TeamMember } from '@/types'
 
 // Database utility functions for encrypted JSON file storage
 
@@ -9,6 +9,7 @@ const ENCRYPTION_KEY = process.env.DB_ENCRYPTION_KEY || 'your-secret-encryption-
 const DATA_DIR = path.join(process.cwd(), 'data')
 const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json')
 const SECTIONS_FILE = path.join(DATA_DIR, 'sections.json')
+const TEAM_MEMBERS_FILE = path.join(DATA_DIR, 'team-members.json')
 
 interface DatabaseFile {
   projects: Record<string, Project>
@@ -18,6 +19,11 @@ interface DatabaseFile {
 
 interface SectionsFile {
   sections: Record<string, Section>
+}
+
+interface TeamMembersFile {
+  members: Record<string, TeamMember>
+  memberIds: string[]
 }
 
 export class Database {
@@ -81,6 +87,28 @@ export class Database {
     this.ensureDataDir()
     const encryptedData = this.encryptData(data)
     fs.writeFileSync(SECTIONS_FILE, encryptedData, 'utf8')
+  }
+
+  // Load team members from encrypted file
+  static loadTeamMembersFile(): TeamMembersFile {
+    this.ensureDataDir()
+    if (!fs.existsSync(TEAM_MEMBERS_FILE)) {
+      return { members: {}, memberIds: [] }
+    }
+    try {
+      const encryptedData = fs.readFileSync(TEAM_MEMBERS_FILE, 'utf8')
+      return this.decryptData<TeamMembersFile>(encryptedData)
+    } catch (error) {
+      console.error('Error loading team members file:', error)
+      return { members: {}, memberIds: [] }
+    }
+  }
+
+  // Save team members to encrypted file
+  static saveTeamMembersFile(data: TeamMembersFile) {
+    this.ensureDataDir()
+    const encryptedData = this.encryptData(data)
+    fs.writeFileSync(TEAM_MEMBERS_FILE, encryptedData, 'utf8')
   }
   // Project operations
   static async createProject(project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project> {
@@ -246,7 +274,7 @@ export class Database {
   }
 
   static async getAllSections(): Promise<Record<string, Section>> {
-    const sectionTypes: Section['type'][] = ['hero', 'about', 'tools', 'contact', 'footer']
+    const sectionTypes: Section['type'][] = ['hero', 'about', 'team', 'tools', 'contact', 'footer']
     const sections: Record<string, Section> = {}
     
     for (const type of sectionTypes) {
@@ -257,6 +285,94 @@ export class Database {
     }
     
     return sections
+  }
+
+  // Team Member operations
+  static async createTeamMember(member: Omit<TeamMember, 'id' | 'joinedDate'>): Promise<TeamMember> {
+    const id = `member_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    const joinedDate = new Date()
+    
+    const newMember: TeamMember = {
+      ...member,
+      id,
+      joinedDate,
+      isActive: true,
+    }
+    
+    const data = this.loadTeamMembersFile()
+    data.members[id] = newMember
+    data.memberIds.push(id)
+    this.saveTeamMembersFile(data)
+    
+    return newMember
+  }
+
+  static async getTeamMember(id: string): Promise<TeamMember | null> {
+    const data = this.loadTeamMembersFile()
+    const member = data.members[id]
+    if (!member) {
+      return null
+    }
+    
+    return {
+      ...member,
+      joinedDate: new Date(member.joinedDate),
+    }
+  }
+
+  static async updateTeamMember(id: string, updates: Partial<Omit<TeamMember, 'id' | 'joinedDate'>>): Promise<TeamMember | null> {
+    const existing = await this.getTeamMember(id)
+    if (!existing) return null
+    
+    const data = this.loadTeamMembersFile()
+    const updatedMember: TeamMember = {
+      ...existing,
+      ...updates,
+      id: existing.id,
+      joinedDate: existing.joinedDate,
+    }
+    
+    data.members[id] = updatedMember
+    this.saveTeamMembersFile(data)
+    return updatedMember
+  }
+
+  static async deleteTeamMember(id: string): Promise<boolean> {
+    const member = await this.getTeamMember(id)
+    if (!member) return false
+    
+    const data = this.loadTeamMembersFile()
+    delete data.members[id]
+    data.memberIds = data.memberIds.filter(mid => mid !== id)
+    this.saveTeamMembersFile(data)
+    
+    return true
+  }
+
+  static async getAllTeamMembers(options: { activeOnly?: boolean } = {}): Promise<TeamMember[]> {
+    const { activeOnly = false } = options
+    
+    const data = this.loadTeamMembersFile()
+    let members: TeamMember[] = []
+    
+    for (const id of data.memberIds) {
+      const member = data.members[id]
+      if (member) {
+        const processedMember = {
+          ...member,
+          joinedDate: new Date(member.joinedDate),
+        }
+        
+        if (!activeOnly || processedMember.isActive) {
+          members.push(processedMember)
+        }
+      }
+    }
+    
+    // Sort by joinedDate desc
+    members.sort((a, b) => b.joinedDate.getTime() - a.joinedDate.getTime())
+    
+    return members
   }
 
   // Utility functions

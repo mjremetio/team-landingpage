@@ -5,16 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { SectionEditor } from '@/components/admin/SectionEditor'
 import { Section, SectionContent } from '@/types'
-import { Home, User, Wrench, Mail, FileText } from 'lucide-react'
+import { Home, User, Users, Wrench, Mail, FileText } from 'lucide-react'
 
 export default function AdminSectionsPage() {
   const [sections, setSections] = useState<Record<string, Section>>({})
   const [loading, setLoading] = useState(true)
 
   const sectionConfig = {
-    hero: { name: 'Hero Section', icon: Home, description: 'Main landing section with your introduction' },
-    about: { name: 'About Section', icon: User, description: 'Your biography, skills, and experience' },
-    tools: { name: 'Tools Section', icon: Wrench, description: 'Technologies and tools you use' },
+    hero: { name: 'Hero Section', icon: Home, description: 'Main landing section with team introduction' },
+    about: { name: 'About Section', icon: User, description: 'Team mission, vision, and company story' },
+    team: { name: 'Team Section', icon: Users, description: 'Team members and departments' },
+    tools: { name: 'Tools Section', icon: Wrench, description: 'Technologies and tools used by the team' },
     contact: { name: 'Contact Section', icon: Mail, description: 'Contact information and form' },
     footer: { name: 'Footer Section', icon: FileText, description: 'Footer links and copyright' },
   }
@@ -86,12 +87,12 @@ export default function AdminSectionsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Content Sections</h1>
         <p className="text-muted-foreground">
-          Manage the content sections of your portfolio homepage
+          Manage the content sections of your team portfolio homepage
         </p>
       </div>
 
       <Tabs defaultValue="hero" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           {Object.entries(sectionConfig).map(([key, config]) => {
             const Icon = config.icon
             return (
