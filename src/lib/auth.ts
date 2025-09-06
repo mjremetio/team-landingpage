@@ -90,11 +90,11 @@ class SimpleBcrypt {
   
   static async compare(password: string, hash: string): Promise<boolean> {
     const parts = hash.split('$')
-    if (parts.length !== 4) return false
+    if (parts.length !== 5) return false  // $2b$rounds$salt$hash
     
     const rounds = parseInt(parts[2])
-    const salt = parts[3].slice(0, 32)
-    const expectedHash = parts[3].slice(32)
+    const salt = parts[3]
+    const expectedHash = parts[4]
     
     let hashed = password + salt
     for (let i = 0; i < rounds; i++) {
